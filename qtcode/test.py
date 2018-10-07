@@ -1,8 +1,9 @@
-from PyQt5.QtWidgets import QWidget, QFileSystemModel, QHeaderView, QFileDialog, QMessageBox, QPlainTextEdit, QApplication
+from PyQt5.QtWidgets import QWidget, QFileSystemModel, QHeaderView, QFileDialog, QMessageBox, QPlainTextEdit, QApplication, QListView
 from PyQt5.QtGui import QPalette, QColor, QIcon, QStandardItem, QStandardItemModel
 from PyQt5.QtCore import QSize, Qt
 from PyQt5 import uic
 from config.config import Config
+from libs.HtmlTestRunner.runner import HTMLTestRunner
 
 import sys
 import os
@@ -29,6 +30,10 @@ class Test(QWidget, form_class):
         super(Test, self).__init__(parent)
         self.setupUi(self)
         
+        # member variable
+        self.__rollbackImporter = RollbackImporter()
+        self.__unittest_thread = None
+        
         # treeView Size
         self.splitter.setSizes([Config().getint('SIZE','QtTestFileExplorer'),(self.size().width()) - Config().getint('SIZE','QtTestFileExplorer')])
         
@@ -50,12 +55,24 @@ class Test(QWidget, form_class):
         
         # connect
         self.treeView.activated.connect(self._btnAdd_clicked)
+        self.btnDel.clicked.connect(self._btnDel_clicked)
+        self.listView.activated.connect(self._btnRun_clicked)
+        self.listView.keyPressEvent = self._listViewKeyPressEvent
         
+        self.btnRun.clicked.connect(self._btnRun_clicked)
+        self.btnStop.clicked.connect(self._btnStop_clicked)
+        
+    def _listViewKeyPressEvent(self, event):
+        if (event.key() == Qt.Key_Delete):
+            self._btnDel_clicked()
+        else:
+            QListView.keyPressEvent(self.listView, event)
+            
     def _btnAdd_clicked(self):
         selectedIndex = self.treeView.selectedIndexes()
         selectedItems = [self.model.filePath(ii) for ii in selectedIndex]
         
-        testloader = unittest.TestLoader()        
+        testloader = unittest.TestLoader() 
         
         for ii in selectedItems:
             if (ii[-3:] != ".py"):
@@ -84,8 +101,56 @@ class Test(QWidget, form_class):
                 child.setData(testname)
                 child.setToolTip(testname._testMethodDoc)
                 self.testmodel.insertRow(0, child)
-                print("%s is added" % (testname))   
-                    
+
+    def _btnRun_clicked(self):
+        """ unittest run start """
+        self.btnRun.setEnabled(False)
+        
+        self.__rollbackImporter.rollbackImports() # clearly make sure test modules    
+    
+        selectedIndex = self.listView.selectedIndexes()
+        selectedItems = [self.testmodel.itemFromIndex(ii) for ii in selectedIndex]
+        
+        suite = unittest.TestSuite()
+        for testcase in selectedItems:
+            if testcase.data() is not None:
+                suite.addTest(testcase.data())
+            else:
+                """ parents (filename) is not runnable """
+                logger.error("bug")
+
+        if suite.countTestCases() != 0:          
+            testinfo = {'Note' : 'None'}    
+            if (self.checkBox.checkState() == Qt.Unchecked):
+                runner = unittest.TextTestRunner(verbosity=2)    
+            else:        
+                runner = HTMLTestRunner(output=Config().get('PATH','QtTestReportPath'),
+                                        combine_reports=True,
+                                        report_name=Config().get('REPORT','HTMLReportFileName'), 
+                                        report_title=Config().get('REPORT','HTMLReportTitle'),
+                                        open_in_browser=Config().getboolean('REPORT','HTMLReportOpenBrowser'),
+                                        template_args=testinfo)   
+            runner.run(suite)                      
+        else:
+            """ there are not selected item """
+            print("there are not selected item")
+            logger.debug("there are not selected item")
+        self.btnRun.setEnabled(True)                
+      
+    def _btnStop_clicked(self):
+        pass
+        
+    def _btnDel_clicked(self):
+        """ delete selected unittest list """
+        print("del btn click")
+        selectedIndex = self.listView.selectedIndexes()
+        deleteRow = list()
+        for select in selectedIndex:
+            deleteRow.append((select.row(), select.parent()))
+        deleteRow.sort(reverse=True)
+        for selectRow in deleteRow:
+            self.testmodel.removeRow(selectRow[0], selectRow[1])                
+                
     def __extract_testunit(self, testsuite, testunits):
         """ extract unittest from testsuite discover was used"""
         if type(testsuite._tests[0]) == unittest.suite.TestSuite:

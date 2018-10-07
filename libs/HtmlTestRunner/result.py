@@ -84,8 +84,12 @@ class _TestInfo(object):
         self.stderr = test_result._stderr_data
 
         self.is_subtest = subTest is not None
-
-        self.test_description = test_method._testMethodDoc.strip() if type(test_method._testMethodDoc) is str else None
+        
+        if hasattr(test_method, 'test_method') is True:
+            self.test_description = test_method._testMethodDoc.strip() if type(test_method._testMethodDoc) is str else None
+        else:
+            self.test_description = None
+            
         self.test_exception_info = (
             '' if outcome in (self.SUCCESS, self.SKIP)
             else self.test_result._exc_info_to_string(

@@ -4,6 +4,7 @@ from PyQt5.QtCore import QSize, Qt
 from PyQt5 import uic
 from config.config import Config
 from libs.HtmlTestRunner.runner import HTMLTestRunner
+from core.example.example import Example
 
 import sys
 import os
@@ -62,6 +63,8 @@ class Test(QWidget, form_class):
         self.btnRun.clicked.connect(self._btnRun_clicked)
         self.btnStop.clicked.connect(self._btnStop_clicked)
         
+        self.test = Example()
+
     def _listViewKeyPressEvent(self, event):
         if (event.key() == Qt.Key_Delete):
             self._btnDel_clicked()

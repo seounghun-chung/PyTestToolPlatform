@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QFileSystemModel, QHeaderView, QFileDialog, QMessageBox, QPlainTextEdit, QApplication, QListView
 from PyQt5.QtGui import QPalette, QColor, QIcon, QStandardItem, QStandardItemModel
-from PyQt5.QtCore import QSize, Qt
+from PyQt5.QtCore import QSize, Qt, QThread, QObject, pyqtSignal, pyqtSlot
 from PyQt5 import uic
 from config.config import Config
 from libs.HtmlTestRunner.runner import HTMLTestRunner
@@ -9,7 +9,6 @@ from core.example.example import Example
 import sys
 import os
 import unittest
-import threading
 
 form_class = uic.loadUiType(os.path.join(Config()['PATH']['QtDesignUi'],'test.ui'))[0]
 
@@ -27,6 +26,18 @@ class RollbackImporter(object):
                 # Force reload when modname next imported
                 del(sys.modules[modname])
 
+class QUnittestRunner(QThread):
+    def __init__(self, runner = None, testsuite = None):
+        QThread.__init__(self)
+        self.runner = runner
+        self.testsuite = testsuite
+
+    def run(self):
+        self.runner.run(self.testsuite)
+
+    def stop(self):
+        self.terminate()
+        
 class Test(QWidget, form_class):
     def __init__(self, parent=None):
         super(Test, self).__init__(parent)
@@ -34,8 +45,8 @@ class Test(QWidget, form_class):
         
         # member variable
         self.__rollbackImporter = RollbackImporter()
-        self.__unittest_thread = threading.Thread()
-        
+        self.__unittest_thread = QUnittestRunner()
+
         # treeView Size
         self.splitter.setSizes([Config().getint('SIZE','QtTestFileExplorer'),(self.size().width()) - Config().getint('SIZE','QtTestFileExplorer')])
         
@@ -135,16 +146,15 @@ class Test(QWidget, form_class):
                                         open_in_browser=Config().getboolean('REPORT','HTMLReportOpenBrowser'),
                                         template_args=testinfo)   
 
-            if self.__unittest_thread.is_alive() is True:
+            if self.__unittest_thread.isRunning() is True:
                 msg = QMessageBox()
                 msg.setIcon(QMessageBox.Critical)
                 msg.setText("unittest is running ..")
                 msg.setWindowTitle("Error")
                 msg.exec_()
             else:
-                self.__unittest_thread = threading.Thread(target = runner.run, args = (suite,))
-                self.__unittest_thread.daemon = True
-                self.__unittest_thread.start()
+                self.__unittest_thread = QUnittestRunner(runner, suite)
+                self.__unittest_thread.start()         
         else:
             """ there are not selected item """
             print("there are not selected item")
@@ -152,7 +162,7 @@ class Test(QWidget, form_class):
         self.btnRun.setEnabled(True)                
       
     def _btnStop_clicked(self):
-        pass
+        self.__unittest_thread.stop()
         
     def _btnDel_clicked(self):
         """ delete selected unittest list """

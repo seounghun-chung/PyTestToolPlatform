@@ -9,6 +9,7 @@ from core.example.example import Example
 import sys
 import os
 import unittest
+import threading
 
 form_class = uic.loadUiType(os.path.join(Config()['PATH']['QtDesignUi'],'test.ui'))[0]
 
@@ -33,7 +34,7 @@ class Test(QWidget, form_class):
         
         # member variable
         self.__rollbackImporter = RollbackImporter()
-        self.__unittest_thread = None
+        self.__unittest_thread = threading.Thread()
         
         # treeView Size
         self.splitter.setSizes([Config().getint('SIZE','QtTestFileExplorer'),(self.size().width()) - Config().getint('SIZE','QtTestFileExplorer')])
@@ -133,7 +134,17 @@ class Test(QWidget, form_class):
                                         report_title=Config().get('REPORT','HTMLReportTitle'),
                                         open_in_browser=Config().getboolean('REPORT','HTMLReportOpenBrowser'),
                                         template_args=testinfo)   
-            runner.run(suite)                      
+
+            if self.__unittest_thread.is_alive() is True:
+                msg = QMessageBox()
+                msg.setIcon(QMessageBox.Critical)
+                msg.setText("unittest is running ..")
+                msg.setWindowTitle("Error")
+                msg.exec_()
+            else:
+                self.__unittest_thread = threading.Thread(target = runner.run, args = (suite,))
+                self.__unittest_thread.daemon = True
+                self.__unittest_thread.start()
         else:
             """ there are not selected item """
             print("there are not selected item")

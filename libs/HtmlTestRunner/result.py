@@ -373,7 +373,7 @@ class HtmlTestResult(TextTestResult):
 
     def generate_reports(self, testRunner):
         """ Generate report(s) for all given test cases that have been run. """
-        status_tags = ('success', 'danger', 'warning', 'info', 'warning')
+        status_tags = ('success', 'danger', 'danger', 'info', 'warning')
         all_results = self._get_info_by_testcase()
         summaries = self._get_report_summaries(all_results, testRunner)
 

@@ -12,7 +12,8 @@ class My_Tests(unittest.TestCase):
         warnings.warn('test warning3')        
         warnings.warn('test warning4')        
         self.assertTrue(True)
-
+    def test_error(self):
+        a
     def test_three(self):
         self.assertTrue(True)
 

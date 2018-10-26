@@ -88,7 +88,7 @@ class _TestInfo(object):
         
         self.is_subtest = subTest is not None
         
-        if hasattr(test_method, 'test_method') is True:
+        if hasattr(test_method, '_testMethodDoc') is True:
             self.test_description = test_method._testMethodDoc.strip() if type(test_method._testMethodDoc) is str else None
         else:
             self.test_description = None

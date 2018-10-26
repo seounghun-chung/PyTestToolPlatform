@@ -37,7 +37,7 @@
                         <tr class='{{ status_tags[test_case.outcome] }}'>
                             <td class="col-xs-10">{{ test_case.test_id.split(".")[-1] }}</td>
                             <td class="col-xs-1">
-                                <span class="label label-{{ status_tags[test_case.outcome] }}" style="display:block;width:40px;">
+                                <span class="label label-{{ status_tags[test_case.outcome] }}" style="display:block;width:60px;">
                                     {%- if test_case.outcome == test_case.SUCCESS -%}
                                         Pass
                                     {%- elif test_case.outcome == test_case.SKIP -%}
@@ -45,19 +45,19 @@
                                     {%- elif test_case.outcome == test_case.FAILURE -%}
                                         Fail
                                     {%- elif test_case.outcome == test_case.WARNING -%}
-                                        Warn                                        
+                                        Warning                                    
                                     {%- else -%}
                                         Error
                                     {%- endif -%}
                                 </span>
                             </td>
                             <td class="col-xs-1">
-                                {%- if (test_case.stdout or test_case.err or test_case.warning_message) %}
+                                {%- if (test_case.stdout or test_case.err or test_case.test_description or test_case.warning_message) %}
                                 <button class="btn btn-default btn-xs">View</button>
                                 {%- endif %}
                             </td>
                         </tr>
-                        {%- if (test_case.stdout or test_case.err or test_case.err or test_case.warning_message) and test_case.outcome != test_case.SKIP %}
+                        {%- if (test_case.stdout or test_case.err or test_case.test_description or test_case.warning_message) and test_case.outcome != test_case.SKIP %}
                         <tr style="display:none;">
                             <td class="col-xs-9" colspan="3">
                                 <strong> {%- if test_case.test_description %}<p>Test Description: {{ test_case.test_description }}</p>{% endif %} </strong>                            
@@ -83,7 +83,7 @@
                         <tr class='{{ status_tags[test_case.outcome] }}'>
                             <td class="col-xs-10">{{ test_case.test_id.split(".")[-1] }}</td>
                             <td class="col-xs-1">
-                                <span class="label label-{{ status_tags[test_case.outcome] }}" style="display:block;width:40px;">
+                                <span class="label label-{{ status_tags[test_case.outcome] }}" style="display:block;width:60px;">
                                     {%- if test_case.outcome == test_case.SUCCESS -%}
                                         Pass
                                     {%- else -%}
@@ -107,7 +107,7 @@
                                         <tr class='{{ status_tags[subtest.outcome] }}'>
                                             <td class="col-xs-10">{{ subtest.test_id.split(".")[-1] }}</td>
                                             <td class="col-xs-1">
-                                                <span class="label label-{{ status_tags[subtest.outcome] }}" style="display:block;width:40px;">
+                                                <span class="label label-{{ status_tags[subtest.outcome] }}" style="display:block;width:60px;">
                                                 {%- if subtest.outcome == subtest.SUCCESS -%}
                                                     Pass
                                                 {%- else -%}

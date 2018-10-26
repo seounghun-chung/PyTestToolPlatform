@@ -16,7 +16,7 @@
                 <p class='attribute'><strong>Author: </strong>{{ author }}</p>                    
                 <p class='attribute'><strong>Note: </strong> {{Note}}</p>                                
                 <p class='attribute'><strong>Duration: </strong>{{ header_info.status.duration }}</p>
-                <p class='attribute'><strong>Summary: </strong>Total: {{ header_info.status.total }}, Pass: {{ header_info.status.success }}{% if header_info.status.failure %}, Fail: {{ header_info.status.failure }}{% endif %}{% if header_info.status.error %}, Error: {{ header_info.status.error }}{% endif %}{% if header_info.status.skip %}, Skip: {{ header_info.status.skip }}{% endif %}</p>
+                <p class='attribute'><strong>Summary: </strong>Total: {{ header_info.status.total }}, Pass: {{ header_info.status.success }}{% if header_info.status.warning %}, Warning: {{ header_info.status.warning }}{% endif %}{% if header_info.status.failure %}, Fail: {{ header_info.status.failure }}{% endif %}{% if header_info.status.error %}, Error: {{ header_info.status.error }}{% endif %}{% if header_info.status.skip %}, Skip: {{ header_info.status.skip }}{% endif %}</p>
             </div>
         </div>
         {%- for test_case_name, tests_results in all_results.items() %}
@@ -44,24 +44,29 @@
                                         Skip
                                     {%- elif test_case.outcome == test_case.FAILURE -%}
                                         Fail
+                                    {%- elif test_case.outcome == test_case.WARNING -%}
+                                        Warn                                        
                                     {%- else -%}
                                         Error
                                     {%- endif -%}
                                 </span>
                             </td>
                             <td class="col-xs-1">
-                                {%- if (test_case.stdout or test_case.err) %}
+                                {%- if (test_case.stdout or test_case.err or test_case.warning_message) %}
                                 <button class="btn btn-default btn-xs">View</button>
                                 {%- endif %}
                             </td>
                         </tr>
-                        {%- if (test_case.stdout or test_case.err or test_case.err) and test_case.outcome != test_case.SKIP %}
+                        {%- if (test_case.stdout or test_case.err or test_case.err or test_case.warning_message) and test_case.outcome != test_case.SKIP %}
                         <tr style="display:none;">
                             <td class="col-xs-9" colspan="3">
                                 <strong> {%- if test_case.test_description %}<p>Test Description: {{ test_case.test_description }}</p>{% endif %} </strong>                            
                                 {%- if test_case.stdout %}<p style="white-space: pre-wrap;">{{ test_case.stdout }}</p>{% endif %}
                                 {%- if test_case.err %}<p style="color:maroon;white-space: pre-wrap;">{{ test_case.err[0].__name__ }}: {{ test_case.err[1] }}</p>{% endif %}
                                 {%- if test_case.err %}<p style="color:maroon;white-space: pre-wrap;">{{ test_case.test_exception_info }}</p>{% endif %}
+                                {%- if test_case.warning_message %}
+                                <p style="color:darkkhaki;white-space: pre-wrap;">{{ test_case.warning_message }}</p>
+                                {% endif %}                                
                             </td>
                         </tr>
                         {%- endif %}

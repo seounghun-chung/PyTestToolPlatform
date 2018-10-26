@@ -3,6 +3,8 @@ import os
 import sys
 import time
 import traceback
+import logging
+import warnings
 from unittest import TestResult, TextTestResult
 from unittest.result import failfast
 
@@ -72,7 +74,7 @@ def strip_module_names(testcase_names):
 class _TestInfo(object):
     """" Keeps information about the execution of a test method. """
 
-    (SUCCESS, FAILURE, ERROR, SKIP) = range(4)
+    (SUCCESS, FAILURE, ERROR, SKIP, WARNING) = range(5)
 
     def __init__(self, test_result, test_method, outcome=SUCCESS,
                  err=None, subTest=None):
@@ -82,7 +84,8 @@ class _TestInfo(object):
         self.err = err
         self.stdout = test_result._stdout_data
         self.stderr = test_result._stderr_data
-
+        self.warning_message = test_result._warning_message
+        
         self.is_subtest = subTest is not None
         
         if hasattr(test_method, 'test_method') is True:
@@ -91,7 +94,7 @@ class _TestInfo(object):
             self.test_description = None
             
         self.test_exception_info = (
-            '' if outcome in (self.SUCCESS, self.SKIP)
+            '' if outcome in (self.SUCCESS, self.SKIP, self.WARNING)
             else self.test_result._exc_info_to_string(
                 self.err, test_method))
 
@@ -116,7 +119,7 @@ class _TestInfo(object):
 
 class _SubTestInfos(object):
     # TODO: make better: inherit _TestInfo?
-    (SUCCESS, FAILURE, ERROR, SKIP) = range(4)
+    (SUCCESS, FAILURE, ERROR, SKIP, WARNING) = range(5)
 
     def __init__(self, test_id, subtests):
         self.subtests = subtests
@@ -144,6 +147,7 @@ class HtmlTestResult(TextTestResult):
         self.buffer = True
         self._stdout_data = None
         self._stderr_data = None
+        self._warning_message = None
         self.successes = []
         self.subtests = {}
         self.callback = None
@@ -174,9 +178,14 @@ class HtmlTestResult(TextTestResult):
 
     def startTest(self, test):
         """ Called before execute each method. """
-        self.start_time = time.time()
+        self.start_time = time.time()    
+        
+        ''' capture warning message in each of test '''
+        self.catch_warn = warnings.catch_warnings(record=True)
+        self.catch_warn_msg = self.catch_warn.__enter__()
+        self._warning_message = None
+        
         TestResult.startTest(self, test)
-
         if self.showAll:
             self.stream.write(" " + self.getDescription(test))
             self.stream.write(" ... ")
@@ -193,19 +202,33 @@ class HtmlTestResult(TextTestResult):
         self._save_output_data()
         TextTestResult.stopTest(self, test)
         self.stop_time = time.time()
-
+        
+        ''' capture warning message in each of test '''
+        del self.catch_warn
+        
         if self.callback and callable(self.callback):
             self.callback()
             self.callback = None
-
+        
     def addSuccess(self, test):
         """ Called when a test executes successfully. """
+        
+        ''' add warning message if it is '''
+        self._warning_message = '\n'.join(['Warning: %s lineno:%d : %s' % (ii.filename, ii.lineno, ii.message) for ii in self.catch_warn_msg])
+
         self._save_output_data()
-        self._prepare_callback(self.infoclass(self, test), self.successes, "OK", ".")
+        if len(self.catch_warn_msg) > 0:
+            self._prepare_callback(self.infoclass(self, test, self.infoclass.WARNING,''), self.successes, "OK", ".")
+        else:
+            self._prepare_callback(self.infoclass(self, test, self.infoclass.SUCCESS,''), self.successes, "OK", ".")
 
     @failfast
     def addFailure(self, test, err):
         """ Called when a test method fails. """
+
+        ''' add warning message if it is '''
+        self._warning_message = '\n'.join(['Warning: %s lineno:%d : %s' % (ii.filename, ii.lineno, ii.message) for ii in self.catch_warn_msg])
+
         self._save_output_data()
         testinfo = self.infoclass(self, test, self.infoclass.FAILURE, err)
         self._prepare_callback(testinfo, self.failures, "FAIL", "F")
@@ -298,7 +321,7 @@ class HtmlTestResult(TextTestResult):
     def get_results_summary(self, tests):
         """Create a summary of the outcomes of all given tests."""
 
-        failures = errors = skips = successes = 0
+        failures = errors = skips = successes = warnings = 0
         for test in tests:
             outcome = test.outcome
             if outcome == test.ERROR:
@@ -309,7 +332,8 @@ class HtmlTestResult(TextTestResult):
                 skips += 1
             elif outcome == test.SUCCESS:
                 successes += 1
-
+            elif outcome == test.WARNING:
+                warnings += 1
         elapsed_time = 0
         for testinfo in tests:
             if not isinstance(testinfo, _SubTestInfos):
@@ -324,6 +348,7 @@ class HtmlTestResult(TextTestResult):
             "failure": failures,
             "skip": skips,
             "success": successes,
+            "warning": warnings, 
             "duration": self._format_duration(elapsed_time)
         }
 
@@ -348,7 +373,7 @@ class HtmlTestResult(TextTestResult):
 
     def generate_reports(self, testRunner):
         """ Generate report(s) for all given test cases that have been run. """
-        status_tags = ('success', 'danger', 'warning', 'info')
+        status_tags = ('success', 'danger', 'warning', 'info', 'warning')
         all_results = self._get_info_by_testcase()
         summaries = self._get_report_summaries(all_results, testRunner)
 

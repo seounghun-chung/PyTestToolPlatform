@@ -218,7 +218,7 @@ class HtmlTestResult(TextTestResult):
 
         self._save_output_data()
         if len(self.catch_warn_msg) > 0:
-            self._prepare_callback(self.infoclass(self, test, self.infoclass.WARNING,''), self.successes, "OK", ".")
+            self._prepare_callback(self.infoclass(self, test, self.infoclass.WARNING,''), self.successes, "WARN", ".")
         else:
             self._prepare_callback(self.infoclass(self, test, self.infoclass.SUCCESS,''), self.successes, "OK", ".")
 

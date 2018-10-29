@@ -14,6 +14,7 @@ class ssh(object):
         for retryCount in range(0, retry):
             try:
                 self.client.connect(addr, username=username, timeout = timeout)
+                self.sftp = self.client.open_sftp()                
                 ret = True
             except (BadHostKeyException, AuthenticationException, SSHException, socket.error) as e:
                 print(e, ': %d retry to connect ssh' % (retryCount))
@@ -48,23 +49,41 @@ class ssh(object):
     def callback_dummy(self, param):
         print('dummy: ', param)
 
+    def callback_dummy2(self, current, total):
+        print('dummy2: ', current, total)
+        
+    def get(self, remotepath, localpath, callback=None):
+        ''' callback(int currentByte, int totalByte) '''
+        return self.sftp.get(remotepath, localpath, callback=callback)
+        
+    def put(self, localpath, remotepath, callback=None):
+        ''' callback(int currentByte, int totalByte) '''
+        return self.sftp.put(localpath, remotepath, callback=callback)
+        
 def call(a):
     print(type(a), a)
 
+def get_byte(a,b):
+    print('bytes : ', a,b)
+    return True
+    
 if __name__ == "__main__":
     a = ssh()
     a.connect(addr = '35.200.127.220', retry = 1)
-
-    th = threading.Thread(target = a.exec_command, args=('python3 test.py', 2, a.callback_dummy,))
-    th.daemon = True
-    th.start()
-
-    #b = a.exec_command('python3 test.py', callback=call)
-    print('hello')
-    import time
-    time.sleep(4.2)
-    a.close()
-    th.join()
-    a.connect()
-    a.exec_command('ls -all')
-    print('bye')
+    ret = a.put('./hello.py', './hello.py', a.callback_dummy2)
+    print(ret)
+#    a.exec_command('cd source ; ls -all; sleep 1 ; python3 test2.py')
+#    a.exec_command('ls -all')
+#    th = threading.Thread(target = a.exec_command, args=('python3 test.py', 2, a.callback_dummy,))
+#    th.daemon = True
+#    th.start()
+#
+#    #b = a.exec_command('python3 test.py', callback=call)
+#    print('hello')
+#    import time
+#    time.sleep(4.2)
+#    a.close()
+#    th.join()
+#    a.connect()
+#    a.exec_command('ls -all')
+#    print('bye')
